@@ -5,6 +5,11 @@ const addMessageForm = document.querySelector('#add-messages-form');
 const userNameInput = loginForm.querySelector('#username');
 const messageContentInput = addMessageForm.querySelector('#message-content');
 
+const socket = io();
+
+socket.on('message', ({ author, content }) => addMessage(author, content))
+socket.on('login', ({ userName }) => login(userName));
+
 let userName = '';
 
 const login = e => {
@@ -13,14 +18,15 @@ const login = e => {
       userName = userNameInput.value;
       loginForm.classList.remove('show');
       mesagesSection.classList.add('show');
+      socket.emit('login', { author: userName });
     } else alert('We need to know who you are');
   };
 
 function addMessage(author, content) {
     const message = document.createElement('li');
     message.classList.add('message');
-    message.classList.add('message--received');
-    if(author === userName) message.classList.add('message--self');
+    author !== userName ? message.classList.add('message--received') : message.classList.add('message--self');
+    author === 'Chat Bot' ? message.classList.add('message--info') : '';
     message.innerHTML = `
       <h3 class="message__author">${userName === author ? 'You' : author }</h3>
       <div class="message__content">
@@ -30,18 +36,21 @@ function addMessage(author, content) {
     messagesList.appendChild(message);
   }
 
-const sendMessage = e => {
+function sendMessage(e) {
     e.preventDefault();
   
-    if (messageContentInput.value !== '') {
-      addMessage(userName, messageContentInput.value);
-      messageContentInput.value = '';
-    } else {
-      alert(
-        'the message cannot be empty'
-      );
+    let messageContent = messageContentInput.value;
+  
+    if(!messageContent.length) {
+      alert('You have to type something!');
     }
-  };
+    else {
+      addMessage(userName, messageContent);
+      socket.emit('message', { author: userName, content: messageContent })
+      messageContentInput.value = '';
+    }
+  
+  }
 
   loginForm.addEventListener('submit', e => {
     login(e);
